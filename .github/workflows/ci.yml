@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  install:
+    name: Install Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('yarn.lock') }}
+
+      - name: Cache yarn cache
+        uses: actions/cache@v4
+        with:
+          path: .yarn/cache
+          key: yarn-cache-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-cache-
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          if yarn install --offline --frozen-lockfile --check-files; then
+            echo "Dependencies satisfied from cache."
+          else
+            echo "Installing dependencies."
+            yarn install --frozen-lockfile --check-files
+          fi
+
+      - name: Update Browserslist DB (main/dev only)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+        run: |
+          mkdir -p node_modules/.cache/browserslist
+          npx update-browserslist-db@latest --update-db || true
+
+  build-backend:
+    name: Build Backend
+    needs: install
+    uses: ./.github/workflows/_build.yml
+    with:
+      project: verifi-api
+      dist-path: dist/apps/verifi-api
+
+  build-frontend:
+    name: Build Frontend
+    needs: install
+    uses: ./.github/workflows/_build.yml
+    with:
+      project: verifi-user
+      dist-path: dist/apps/verifi-user
+      extra-node-options: --max-old-space-size=4096

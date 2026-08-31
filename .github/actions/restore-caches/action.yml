@@ -1,0 +1,27 @@
+name: Restore caches
+description: Restore node_modules, Nx, and Browserslist caches
+runs:
+  using: composite
+  steps:
+    - name: Restore node_modules
+      uses: actions/cache/restore@v4
+      with:
+        path: node_modules
+        key: node-modules-${{ hashFiles('yarn.lock') }}
+
+    - name: Restore Nx cache
+      uses: actions/cache/restore@v4
+      with:
+        path: .nx/cache
+        key: nx-cache-${{ github.ref }}-${{ github.sha }}
+        restore-keys: |
+          nx-cache-${{ github.ref }}-
+          nx-cache-
+
+    - name: Restore Browserslist cache
+      uses: actions/cache/restore@v4
+      with:
+        path: node_modules/.cache/browserslist
+        key: browserslist-${{ github.run_id }}
+        restore-keys: |
+          browserslist-

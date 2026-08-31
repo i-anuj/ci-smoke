@@ -1,0 +1,57 @@
+name: Build project
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        required: true
+        type: string
+      dist-path:
+        required: true
+        type: string
+      extra-node-options:
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - uses: ./.github/actions/restore-caches
+
+      - name: Build
+        env:
+          NODE_OPTIONS: ${{ inputs.extra-node-options }}
+        run: |
+          set -euo pipefail
+          # SMOKE TEST STAND-IN — replace with the real command below once
+          # you have an actual Nx workspace to build:
+          #   time npx nx build ${{ inputs.project }} --parallel=4 2>&1 | tee build.log
+          echo "Pretending to build ${{ inputs.project }}..." | tee build.log
+          mkdir -p ${{ inputs.dist-path }}
+          echo "built at $(date -u)" > ${{ inputs.dist-path }}/output.txt
+          echo "Done." | tee -a build.log
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.project }}-build-log
+          path: build.log
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.project }}-dist
+          path: ${{ inputs.dist-path }}
+          retention-days: 7

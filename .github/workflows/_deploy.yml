@@ -1,0 +1,40 @@
+name: Deploy to environment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      run-id:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Download backend dist
+        uses: actions/download-artifact@v4
+        with:
+          name: verifi-api-dist
+          path: dist/verifi-api
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.run-id }}
+
+      - name: Download frontend dist
+        uses: actions/download-artifact@v4
+        with:
+          name: verifi-user-dist
+          path: dist/verifi-user
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.run-id }}
+
+      - name: Deploy
+        env:
+          DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET }}
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          echo "Deploying to ${{ inputs.environment }} (${DEPLOY_TARGET})"
+          # actual deploy commands go here
